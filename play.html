@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>¿Fake o Real?</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:#111; color:#f4f4f4; font-family:system-ui,sans-serif; display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; text-align:center; }
+  img { max-width:100%; max-height:50vh; border-radius:12px; }
+  button, input { font:inherit; font-size:1.2rem; padding:14px 24px; border:0; border-radius:10px; }
+  button { font-weight:700; color:#fff; background:#3b82f6; cursor:pointer; }
+  #fake { background:#e74c3c; } #real { background:#2ecc71; }
+  .row { display:flex; gap:16px; }
+  .card { background:#1e1e1e; border-radius:10px; padding:10px 16px; text-align:left; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<h1>¿Fake o Real?</h1>
+<form id="join">
+  <input id="name" placeholder="Tu nombre" maxlength="20" autocomplete="off">
+  <button>Entrar</button>
+  <p id="err" style="color:#e74c3c"></p>
+</form>
+<div id="msg"></div>
+<img id="pic" hidden alt="Imagen a adivinar">
+<div class="row" id="btns" hidden>
+  <button id="fake">FAKE (IA)</button>
+  <button id="real">REAL</button>
+</div>
+<div id="end"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => n.length ? `${n.length} (imagen ${n.join(', ')})` : '0';
+let id = sessionStorage.getItem('id'), myName = sessionStorage.getItem('name');
+
+$('join').onsubmit = async e => {
+  e.preventDefault();
+  const r = await fetch('/join', { method: 'POST', body: JSON.stringify({ name: $('name').value }) });
+  const d = await r.json();
+  if (d.error) return $('err').textContent = d.error;
+  id = d.id; myName = $('name').value.trim();
+  sessionStorage.setItem('id', id); sessionStorage.setItem('name', myName);
+};
+const send = fake => { $('btns').hidden = true; fetch('/answer', { method: 'POST', body: JSON.stringify({ id, fake }) }); };
+$('fake').onclick = () => send(true);
+$('real').onclick = () => send(false);
+
+async function tick() {
+  const s = await (await fetch('/state?id=' + id)).json();
+  // si el servidor se reinició, mi id ya no existe: volver a registrarme
+  const joined = id && (s.phase !== 'lobby' || s.players.some(p => p.name === myName));
+  if (!joined) { id = null; sessionStorage.clear(); }
+  $('join').hidden = !!id;
+  $('pic').hidden = !id || !s.src; if (s.src && !$('pic').src.endsWith(s.src)) $('pic').src = s.src;
+  $('btns').hidden = !(id && s.phase === 'question' && s.mine === undefined);
+  let m = '';
+  if (id) {
+    if (s.phase === 'lobby') m = `Listo, ${myName}. Esperando a que empiece…`;
+    else if (s.phase === 'question') m = s.mine === undefined ? `Imagen ${s.i + 1} de ${s.total}` : 'Respuesta enviada, esperando a los demás…';
+    else if (s.phase === 'reveal') m = `Era ${s.correct ? 'FAKE' : 'REAL'}. ${s.mine === s.correct ? '✅ ¡Acertaste!' : '❌ Fallaste'}`;
+  }
+  $('msg').textContent = m;
+  const me = (s.results || []).find(r => r.name === myName);
+  $('end').innerHTML = me ? `<h2>Resultados</h2><div class="card"><b>${esc(me.name)}</b>: ${me.score} de ${s.total}<br>
+    ❌ Fallos en IA (dijo real, era fake): ${fmt(me.missedAI)}<br>❌ Fallos en reales (dijo fake, era real): ${fmt(me.missedReal)}</div>` : '';
+}
+setInterval(() => tick().catch(() => {}), 1000); tick();
+</script>
+</body>
+</html>

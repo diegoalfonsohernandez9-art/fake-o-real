@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>¿Fake o Real? - Pantalla</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:#111; color:#f4f4f4; font-family:system-ui,sans-serif; display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; text-align:center; }
+  img { max-width:100%; max-height:62vh; border-radius:12px; }
+  button { font:inherit; font-weight:700; font-size:1.2rem; padding:14px 32px; border:0; border-radius:10px; cursor:pointer; color:#fff; background:#3b82f6; }
+  #qr { background:#fff; padding:12px; border-radius:12px; }
+  .card { background:#1e1e1e; border-radius:10px; padding:10px 16px; margin:8px 0; text-align:left; }
+  .chip { display:inline-block; background:#1e1e1e; border-radius:999px; padding:8px 16px; margin:4px; font-weight:600; }
+  .chip.ok { background:#14532d; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<h1>¿Fake o Real?</h1>
+<div id="lobby">
+  <p>Escanea el QR con tu celular (misma red WiFi)</p>
+  <div id="qr" style="display:inline-block"></div>
+  <p id="url" style="opacity:.7"></p>
+</div>
+<h2 id="cnt"></h2>
+<div id="chips"></div>
+<div id="count"></div>
+<img id="pic" hidden alt="Imagen a adivinar">
+<div id="info"></div>
+<button id="act" hidden></button>
+<div id="end"></div>
+<button id="again" hidden>Nueva partida</button>
+
+<script>
+const $ = id => document.getElementById(id);
+const post = a => fetch('/host', { method: 'POST', body: JSON.stringify({ action: a }) });
+let action, qrUrl;
+
+$('act').onclick = () => post(action);
+$('again').onclick = () => post('reset');
+
+async function tick() {
+  const s = await (await fetch('/state')).json();
+  const q = s.phase === 'question';
+  $('cnt').textContent = s.phase === 'end' ? '' : `${s.players.length} jugador${s.players.length === 1 ? '' : 'es'} · ${s.total} imágenes` + (q ? ` · respondieron ${s.players.filter(p => p.answered).length}` : '');
+  $('chips').innerHTML = s.phase === 'end' ? '' : s.players.map(p => `<span class="chip ${q && p.answered ? 'ok' : ''}">${esc(p.name)}${q ? (p.answered ? ' ✅' : ' …') : ''}</span>`).join('');
+  $('lobby').hidden = s.phase !== 'lobby';
+  if (s.phase === 'lobby' && qrUrl !== s.joinUrl) {
+    qrUrl = s.joinUrl; $('qr').innerHTML = '';
+    new QRCode($('qr'), { text: s.joinUrl, width: 240, height: 240 });
+    $('url').textContent = s.joinUrl;
+  }
+  $('pic').hidden = !s.src; if (s.src && !$('pic').src.endsWith(s.src)) $('pic').src = s.src;
+  $('count').textContent = s.src ? `Imagen ${s.i + 1} de ${s.total}` : '';
+  let info = s.phase === 'lobby' && !s.players.length ? 'Esperando jugadores…' : '';
+  if (s.phase === 'reveal') info = `Era ${s.correct ? 'FAKE' : 'REAL'}. Acertaron: ${s.right.join(', ') || 'nadie'}`;
+  if (s.phase === 'end') info = '';
+  $('info').textContent = info;
+  action = { lobby: 'start', question: 'reveal', reveal: 'next' }[s.phase];
+  $('act').hidden = !action || (s.phase === 'lobby' && !s.players.length);
+  $('act').textContent = { lobby: 'Empezar', question: 'Revelar ya', reveal: s.i === s.total - 1 ? 'Ver resultados' : 'Siguiente' }[s.phase] || '';
+  $('again').hidden = s.phase !== 'end';
+  $('end').innerHTML = (s.results || []).map(r => `<div class="card"><b>${esc(r.name)}</b>: ${r.score} de ${s.total}<br>
+    ❌ Fallos en IA (dijo real, era fake): ${fmt(r.missedAI)}<br>❌ Fallos en reales (dijo fake, era real): ${fmt(r.missedReal)}</div>`).join('');
+}
+const fmt = n => n.length ? `${n.length} (imagen ${n.join(', ')})` : '0';
+const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+setInterval(() => tick().catch(() => {}), 1000); tick();
+</script>
+</body>
+</html>

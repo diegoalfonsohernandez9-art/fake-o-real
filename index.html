@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>¿Fake o Real?</title>
+<style>
+  body { margin:0; min-height:100vh; background:#111; color:#f4f4f4; font-family:system-ui,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:16px; text-align:center; }
+  code { background:#1e1e1e; padding:4px 8px; border-radius:6px; }
+</style>
+</head>
+<body>
+<h1>¿Fake o Real?</h1>
+<p id="m">Buscando el servidor…</p>
+<script>
+const URL_HOST = 'http://localhost:3100/host';
+// no-cors: desde file:// solo necesitamos saber si el servidor responde
+fetch('http://localhost:3100/state', { mode: 'no-cors' })
+  .then(() => location.replace(URL_HOST))
+  .catch(() => document.getElementById('m').innerHTML =
+    'El servidor no está encendido.<br><br>Haz doble clic en <code>INICIAR.bat</code> (o corre <code>node server.js</code>) y recarga esta página.');
+</script>
+</body>
+</html>
