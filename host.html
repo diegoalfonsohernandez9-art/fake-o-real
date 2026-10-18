@@ -61,7 +61,7 @@ async function tick() {
   $('pic').hidden = !s.src; if (s.src && !$('pic').src.split('?')[0].endsWith(s.src)) $('pic').src = s.src;
   $('count').textContent = s.src ? `Imagen ${s.i + 1} de ${s.total}` : '';
   let info = s.phase === 'lobby' && !s.players.length ? 'Esperando jugadores…' : '';
-  if (s.phase === 'reveal') info = `Era ${s.correct ? 'FAKE' : 'REAL'}. Acertaron: ${s.right.join(', ') || 'nadie'}`;
+  if (s.phase === 'reveal') info = `Era ${s.correct ? 'FAKE' : 'REAL'}. Acertaron: ${s.right} de ${s.players.length}`;
   if (s.phase === 'end') info = '';
   $('info').textContent = info;
   action = { lobby: 'start', question: 'reveal', reveal: 'next' }[s.phase];

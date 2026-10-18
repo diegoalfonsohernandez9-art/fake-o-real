@@ -45,7 +45,7 @@ function state(id, joinUrl) {
   if (id && players[id]) s.mine = players[id].answers[i];
   if (phase === 'reveal') {
     s.correct = IMAGES[i].fake;
-    s.right = list().filter(([, p]) => p.answers[i] === IMAGES[i].fake).map(([, p]) => p.name);
+    s.right = list().filter(([, p]) => p.answers[i] === IMAGES[i].fake).length; // solo el conteo: anónimo
   }
   if (phase === 'end') s.results = results();
   return s;
