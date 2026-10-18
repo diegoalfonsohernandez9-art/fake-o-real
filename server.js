@@ -40,6 +40,7 @@ function result(p) {
 function stats() {
   const rs = list().map(([, p]) => result(p));
   return { players: rs.length,
+    scores: rs.map(r => r.score), // sin nombres
     avg: rs.length ? rs.reduce((t, r) => t + r.score, 0) / rs.length : 0,
     missedAI: rs.reduce((t, r) => t + r.missedAI.length, 0),
     missedReal: rs.reduce((t, r) => t + r.missedReal.length, 0),

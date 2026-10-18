@@ -14,6 +14,10 @@
   .card { background:#1e1e1e; border-radius:10px; padding:10px 16px; margin:8px 0; text-align:left; }
   .chip { display:inline-block; background:#1e1e1e; border-radius:999px; padding:8px 16px; margin:4px; font-weight:600; }
   .chip.ok { background:#14532d; }
+  #end { width:min(720px,100%); }
+  .chart { text-align:left; }
+  .bar { display:grid; grid-template-columns:150px 1fr 56px; align-items:center; gap:10px; margin:6px 0; }
+  .bar i { display:block; height:22px; border-radius:6px; min-width:2px; transition:width .6s; }
   [hidden] { display:none !important; }
 </style>
 </head>
@@ -70,11 +74,20 @@ async function tick() {
   $('again').hidden = s.phase !== 'end';
   $('end').innerHTML = s.stats ? statsHtml(s.stats, s.total) : '';
 }
-const statsHtml = (t, total) => `<h2>Estadísticas del grupo</h2>
-  <div class="card">${t.players} jugador${t.players === 1 ? '' : 'es'} · promedio de aciertos: <b>${t.avg.toFixed(1)} de ${total}</b><br>
-  ❌ Fallos en IA (dijeron real, era fake): <b>${t.missedAI}</b><br>
-  ❌ Fallos en reales (dijeron fake, era real): <b>${t.missedReal}</b></div>
-  ${t.perImage.map((m, j) => `<div class="card">Imagen ${j + 1} (${m.fake ? 'FAKE' : 'REAL'}): acertaron <b>${m.right} de ${t.players}</b></div>`).join('')}`;
+// Barra horizontal: valor/max -> ancho en %.
+const bar = (label, v, max, color, txt) => `<div class="bar"><span>${label}</span><span style="background:#222;border-radius:6px"><i style="width:${max ? v / max * 100 : 0}%;background:${color}"></i></span><b>${txt}</b></div>`;
+const statsHtml = (t, total) => {
+  const P = t.players, dist = Array.from({ length: total + 1 }, (_, n) => t.scores.filter(x => x === n).length);
+  return `<h2>Estadísticas del grupo</h2>
+  <div class="card chart">${P} jugador${P === 1 ? '' : 'es'} · promedio de aciertos: <b>${t.avg.toFixed(1)} de ${total}</b></div>
+  <div class="card chart"><b>Aciertos por imagen</b>
+    ${t.perImage.map((m, j) => bar(`Imagen ${j + 1} · ${m.fake ? 'FAKE' : 'REAL'}`, m.right, P, m.fake ? '#e74c3c' : '#2ecc71', P ? Math.round(m.right / P * 100) + '%' : '0%')).join('')}</div>
+  <div class="card chart"><b>Tipo de fallo</b>
+    ${bar('Dijeron real, era IA', t.missedAI, Math.max(t.missedAI, t.missedReal), '#e74c3c', t.missedAI)}
+    ${bar('Dijeron IA, era real', t.missedReal, Math.max(t.missedAI, t.missedReal), '#2ecc71', t.missedReal)}</div>
+  <div class="card chart"><b>Cuántos jugadores sacaron cada puntaje</b>
+    ${dist.map((c, n) => bar(`${n} de ${total}`, c, Math.max(...dist), '#3b82f6', c)).join('')}</div>`;
+};
 const fmt = n => n.length ? `${n.length} (imagen ${n.join(', ')})` : '0';
 const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 setInterval(() => tick().catch(() => {}), 1000); tick();
