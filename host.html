@@ -68,9 +68,13 @@ async function tick() {
   $('act').hidden = !action || (s.phase === 'lobby' && !s.players.length);
   $('act').textContent = { lobby: 'Empezar', question: 'Revelar ya', reveal: s.i === s.total - 1 ? 'Ver resultados' : 'Siguiente' }[s.phase] || '';
   $('again').hidden = s.phase !== 'end';
-  $('end').innerHTML = (s.results || []).map(r => `<div class="card"><b>${esc(r.name)}</b>: ${r.score} de ${s.total}<br>
-    ❌ Fallos en IA (dijo real, era fake): ${fmt(r.missedAI)}<br>❌ Fallos en reales (dijo fake, era real): ${fmt(r.missedReal)}</div>`).join('');
+  $('end').innerHTML = s.stats ? statsHtml(s.stats, s.total) : '';
 }
+const statsHtml = (t, total) => `<h2>Estadísticas del grupo</h2>
+  <div class="card">${t.players} jugador${t.players === 1 ? '' : 'es'} · promedio de aciertos: <b>${t.avg.toFixed(1)} de ${total}</b><br>
+  ❌ Fallos en IA (dijeron real, era fake): <b>${t.missedAI}</b><br>
+  ❌ Fallos en reales (dijeron fake, era real): <b>${t.missedReal}</b></div>
+  ${t.perImage.map((m, j) => `<div class="card">Imagen ${j + 1} (${m.fake ? 'FAKE' : 'REAL'}): acertaron <b>${m.right} de ${t.players}</b></div>`).join('')}`;
 const fmt = n => n.length ? `${n.length} (imagen ${n.join(', ')})` : '0';
 const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 setInterval(() => tick().catch(() => {}), 1000); tick();

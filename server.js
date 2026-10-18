@@ -29,13 +29,21 @@ reset();
 const list = () => Object.entries(players);
 const allAnswered = () => list().length > 0 && list().every(([, p]) => p.answers[i] !== undefined);
 
-function results() {
-  return list().map(([, p]) => {
-    const wrong = IMAGES.map((_, j) => j).filter(j => p.answers[j] !== IMAGES[j].fake);
-    return { name: p.name, score: IMAGES.length - wrong.length,
-      missedAI: wrong.filter(j => IMAGES[j].fake).map(j => j + 1),    // era IA, dijo real
-      missedReal: wrong.filter(j => !IMAGES[j].fake).map(j => j + 1) }; // era real, dijo IA
-  }).sort((a, b) => b.score - a.score);
+function result(p) {
+  const wrong = IMAGES.map((_, j) => j).filter(j => p.answers[j] !== IMAGES[j].fake);
+  return { score: IMAGES.length - wrong.length,
+    missedAI: wrong.filter(j => IMAGES[j].fake).map(j => j + 1),    // era IA, dijo real
+    missedReal: wrong.filter(j => !IMAGES[j].fake).map(j => j + 1) }; // era real, dijo IA
+}
+
+// Estadísticas del grupo sin nombres.
+function stats() {
+  const rs = list().map(([, p]) => result(p));
+  return { players: rs.length,
+    avg: rs.length ? rs.reduce((t, r) => t + r.score, 0) / rs.length : 0,
+    missedAI: rs.reduce((t, r) => t + r.missedAI.length, 0),
+    missedReal: rs.reduce((t, r) => t + r.missedReal.length, 0),
+    perImage: IMAGES.map((m, j) => ({ fake: m.fake, right: list().filter(([, p]) => p.answers[j] === m.fake).length })) };
 }
 
 function state(id, joinUrl) {
@@ -47,7 +55,7 @@ function state(id, joinUrl) {
     s.correct = IMAGES[i].fake;
     s.right = list().filter(([, p]) => p.answers[i] === IMAGES[i].fake).length; // solo el conteo: anónimo
   }
-  if (phase === 'end') s.results = results();
+  if (phase === 'end') { s.stats = stats(); if (id && players[id]) s.me = result(players[id]); }
   return s;
 }
 

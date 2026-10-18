@@ -70,8 +70,8 @@ async function tick() {
     else if (s.phase === 'reveal') m = `Era ${s.correct ? 'FAKE' : 'REAL'}. ${s.mine === s.correct ? '✅ ¡Acertaste!' : '❌ Fallaste'}`;
   }
   $('msg').textContent = m;
-  const me = (s.results || []).find(r => r.name === myName);
-  $('end').innerHTML = me ? `<h2>Resultados</h2><div class="card"><b>${esc(me.name)}</b>: ${me.score} de ${s.total}<br>
+  const me = s.me;
+  $('end').innerHTML = me ? `<h2>Resultados</h2><div class="card"><b>Tu resultado</b>: ${me.score} de ${s.total}<br>
     ❌ Fallos en IA (dijo real, era fake): ${fmt(me.missedAI)}<br>❌ Fallos en reales (dijo fake, era real): ${fmt(me.missedReal)}</div>` : '';
 }
 setInterval(() => tick().catch(() => {}), 1000); tick();
