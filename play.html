@@ -33,6 +33,11 @@
 
 <script>
 const $ = id => document.getElementById(id);
+// Precarga todas las imágenes una vez y reintenta la que falle, para que no salgan rotas.
+let preloaded = false;
+function preload(srcs) { if (preloaded || !srcs) return; preloaded = true; srcs.forEach(s => new Image().src = s); }
+$('pic').onerror = () => setTimeout(() => { const u = $('pic').src.split('?')[0]; $('pic').src = u + '?r=' + Date.now(); }, 800);
+
 const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = n => n.length ? `${n.length} (imagen ${n.join(', ')})` : '0';
 let id = sessionStorage.getItem('id'), myName = sessionStorage.getItem('name');
@@ -51,11 +56,12 @@ $('real').onclick = () => send(false);
 
 async function tick() {
   const s = await (await fetch('/state?id=' + id)).json();
+  preload(s.images);
   // si el servidor se reinició, mi id ya no existe: volver a registrarme
   const joined = id && (s.phase !== 'lobby' || s.players.some(p => p.name === myName));
   if (!joined) { id = null; sessionStorage.clear(); }
   $('join').hidden = !!id;
-  $('pic').hidden = !id || !s.src; if (s.src && !$('pic').src.endsWith(s.src)) $('pic').src = s.src;
+  $('pic').hidden = !id || !s.src; if (s.src && !$('pic').src.split('?')[0].endsWith(s.src)) $('pic').src = s.src;
   $('btns').hidden = !(id && s.phase === 'question' && s.mine === undefined);
   let m = '';
   if (id) {

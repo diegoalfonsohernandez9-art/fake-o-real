@@ -35,6 +35,11 @@
 
 <script>
 const $ = id => document.getElementById(id);
+// Precarga todas las imágenes una vez y reintenta la que falle, para que no salgan rotas.
+let preloaded = false;
+function preload(srcs) { if (preloaded || !srcs) return; preloaded = true; srcs.forEach(s => new Image().src = s); }
+$('pic').onerror = () => setTimeout(() => { const u = $('pic').src.split('?')[0]; $('pic').src = u + '?r=' + Date.now(); }, 800);
+
 const post = a => fetch('/host', { method: 'POST', body: JSON.stringify({ action: a }) });
 let action, qrUrl;
 
@@ -43,6 +48,7 @@ $('again').onclick = () => post('reset');
 
 async function tick() {
   const s = await (await fetch('/state')).json();
+  preload(s.images);
   const q = s.phase === 'question';
   $('cnt').textContent = s.phase === 'end' ? '' : `${s.players.length} jugador${s.players.length === 1 ? '' : 'es'} · ${s.total} imágenes` + (q ? ` · respondieron ${s.players.filter(p => p.answered).length}` : '');
   $('chips').innerHTML = s.phase === 'end' ? '' : s.players.map(p => `<span class="chip ${q && p.answered ? 'ok' : ''}">${esc(p.name)}${q ? (p.answered ? ' ✅' : ' …') : ''}</span>`).join('');
@@ -52,7 +58,7 @@ async function tick() {
     new QRCode($('qr'), { text: s.joinUrl, width: 240, height: 240 });
     $('url').textContent = s.joinUrl;
   }
-  $('pic').hidden = !s.src; if (s.src && !$('pic').src.endsWith(s.src)) $('pic').src = s.src;
+  $('pic').hidden = !s.src; if (s.src && !$('pic').src.split('?')[0].endsWith(s.src)) $('pic').src = s.src;
   $('count').textContent = s.src ? `Imagen ${s.i + 1} de ${s.total}` : '';
   let info = s.phase === 'lobby' && !s.players.length ? 'Esperando jugadores…' : '';
   if (s.phase === 'reveal') info = `Era ${s.correct ? 'FAKE' : 'REAL'}. Acertaron: ${s.right.join(', ') || 'nadie'}`;

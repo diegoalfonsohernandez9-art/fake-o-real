@@ -4,16 +4,23 @@ const PORT = 3100;
 
 // Para agregar imágenes: copia el archivo a esta carpeta y añade una línea. fake: true = IA.
 const IMAGES = [
-  { src: '1.png', fake: false },
-  { src: '2.png', fake: false },
-  { src: '3.png', fake: true  },
-  { src: '4.png', fake: true  },
-  { src: '5.png', fake: false },
+  { src: '1.jpg', fake: false },
+  { src: '2.jpg', fake: false },
+  { src: '3.jpg', fake: true  },
+  { src: '4.jpg', fake: true  },
+  { src: '5.jpg', fake: false },
+  { src: '6.jpg', fake: false },
+  { src: '7.jpg', fake: true  },
+  { src: '8.jpg', fake: true  },
 ];
 
 const lanIp = Object.values(os.networkInterfaces()).flat()
   .find(n => n.family === 'IPv4' && !n.internal)?.address || 'localhost';
 const joinUrl = `http://${lanIp}:${PORT}/play`;
+
+// Si entran por un túnel/dominio público, el QR debe apuntar a ese dominio y no a la IP local.
+const publicUrl = req => /^(localhost|127.)/.test(req.headers.host || 'localhost') ? joinUrl
+  : `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}/play`;
 
 let phase, i, players; // phase: lobby | question | reveal | end
 const reset = () => { phase = 'lobby'; i = 0; players = {}; };
@@ -31,7 +38,7 @@ function results() {
   }).sort((a, b) => b.score - a.score);
 }
 
-function state(id) {
+function state(id, joinUrl) {
   const s = { phase, joinUrl, total: IMAGES.length, i,
     players: list().map(([, p]) => ({ name: p.name, answered: p.answers[i] !== undefined })) };
   if (phase !== 'lobby' && phase !== 'end') s.src = IMAGES[i].src;
@@ -50,7 +57,7 @@ const pages = { '/': 'host.html', '/host': 'host.html', '/play': 'play.html' };
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
-  if (req.method === 'GET' && url.pathname === '/state') return json(res, state(url.searchParams.get('id')));
+  if (req.method === 'GET' && url.pathname === '/state') return json(res, { ...state(url.searchParams.get('id'), publicUrl(req)), images: IMAGES.map(m => m.src) });
 
   if (req.method === 'POST') {
     const b = await body(req);
@@ -83,5 +90,5 @@ http.createServer(async (req, res) => {
   const file = pages[url.pathname] || (IMAGES.some(m => '/' + m.src === url.pathname) && url.pathname.slice(1));
   if (!file) { res.writeHead(404); return res.end(); }
   const type = file.endsWith('.html') ? 'text/html; charset=utf-8' : 'image/' + path.extname(file).slice(1).replace('jpg', 'jpeg');
-  fs.readFile(path.join(__dirname, file), (e, d) => { res.writeHead(e ? 404 : 200, { 'Content-Type': type }); res.end(d); });
+  fs.readFile(path.join(__dirname, file), (e, d) => { res.writeHead(e ? 404 : 200, { 'Content-Type': type, 'Cache-Control': file.endsWith('.html') ? 'no-cache' : 'public, max-age=86400' }); res.end(d); });
 }).listen(PORT, () => console.log(`Pantalla principal: http://localhost:${PORT}/host\nJugadores (QR): ${joinUrl}`));
