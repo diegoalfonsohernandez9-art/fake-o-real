@@ -32,6 +32,7 @@
 <div id="chips"></div>
 <div id="count"></div>
 <img id="pic" hidden alt="Imagen a adivinar">
+<div id="prog" style="font-size:1.6rem;font-weight:700"></div>
 <div id="info"></div>
 <button id="act" hidden></button>
 <div id="end"></div>
@@ -56,6 +57,7 @@ async function tick() {
   const q = s.phase === 'question';
   $('cnt').textContent = s.phase === 'end' ? '' : `${s.players.length} jugador${s.players.length === 1 ? '' : 'es'} · ${s.total} imágenes` + (q ? ` · respondieron ${s.players.filter(p => p.answered).length}` : '');
   $('chips').innerHTML = s.phase === 'end' ? '' : s.players.map(p => `<span class="chip ${q && p.answered ? 'ok' : ''}">${esc(p.name)}${q ? (p.answered ? ' ✅' : ' …') : ''}</span>`).join('');
+  $('prog').textContent = q ? `Respondieron ${s.players.filter(p => p.answered).length} de ${s.players.length}` : '';
   $('lobby').hidden = s.phase !== 'lobby';
   if (s.phase === 'lobby' && qrUrl !== s.joinUrl) {
     qrUrl = s.joinUrl; $('qr').innerHTML = '';

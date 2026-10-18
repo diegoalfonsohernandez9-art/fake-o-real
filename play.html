@@ -24,6 +24,7 @@
   <p id="err" style="color:#e74c3c"></p>
 </form>
 <div id="msg"></div>
+<div id="prog" style="font-weight:700"></div>
 <img id="pic" hidden alt="Imagen a adivinar">
 <div class="row" id="btns" hidden>
   <button id="fake">FAKE (IA)</button>
@@ -70,6 +71,7 @@ async function tick() {
     else if (s.phase === 'reveal') m = `Era ${s.correct ? 'FAKE' : 'REAL'}. ${s.mine === s.correct ? '✅ ¡Acertaste!' : '❌ Fallaste'}`;
   }
   $('msg').textContent = m;
+  $('prog').textContent = id && s.phase === 'question' ? `Respondieron ${s.players.filter(p => p.answered).length} de ${s.players.length}` : '';
   const me = s.me;
   $('end').innerHTML = me ? `<h2>Resultados</h2><div class="card"><b>Tu resultado</b>: ${me.score} de ${s.total}<br>
     ❌ Fallos en IA (dijo real, era fake): ${fmt(me.missedAI)}<br>❌ Fallos en reales (dijo fake, era real): ${fmt(me.missedReal)}</div>` : '';
