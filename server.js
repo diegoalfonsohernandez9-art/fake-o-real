@@ -12,6 +12,8 @@ const IMAGES = [
   { src: '6.jpg', fake: false },
   { src: '9.jpg', fake: true  },
   { src: '10.jpg', fake: true  },
+  { src: '11.jpg', fake: false },
+  { src: '12.jpg', fake: false },
 ];
 
 const lanIp = Object.values(os.networkInterfaces()).flat()
