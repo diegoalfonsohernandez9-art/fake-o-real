@@ -1,6 +1,6 @@
 // Servidor sin dependencias: node server.js  ->  abre http://localhost:3000/host
 const http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
-const PORT = 3100;
+const PORT = process.env.PORT || 3100;
 
 // Para agregar imágenes: copia el archivo a esta carpeta y añade una línea. fake: true = IA.
 const IMAGES = [
