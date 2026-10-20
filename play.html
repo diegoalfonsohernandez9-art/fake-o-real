@@ -18,9 +18,9 @@
 </head>
 <body>
 <h1>¿Fake o Real?</h1>
-<form id="join">
+<form id="join" style="display:flex;flex-direction:column;align-items:center;gap:12px">
   <input id="name" placeholder="Tu nombre" maxlength="20" autocomplete="off">
-  <button>Entrar</button>
+  <button id="go">Entrar</button>
   <p id="err" style="color:#e74c3c"></p>
 </form>
 <div id="msg"></div>
@@ -41,22 +41,29 @@ $('pic').onerror = () => setTimeout(() => { const u = $('pic').src.split('?')[0]
 
 const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = n => n.length ? `${n.length} (imagen ${n.join(', ')})` : '0';
-let id = sessionStorage.getItem('id'), myName = sessionStorage.getItem('name');
+let id = sessionStorage.getItem('id'), myName = sessionStorage.getItem('name'), joining = false;
 
 $('join').onsubmit = async e => {
   e.preventDefault();
-  const r = await fetch('/join', { method: 'POST', body: JSON.stringify({ name: $('name').value }) });
-  const d = await r.json();
-  if (d.error) return $('err').textContent = d.error;
-  id = d.id; myName = $('name').value.trim();
-  sessionStorage.setItem('id', id); sessionStorage.setItem('name', myName);
+  if (joining) return; // un solo registro a la vez: con conexión lenta se duplicaban jugadores
+  joining = true; $('go').disabled = true;
+  try {
+    const r = await fetch('/join', { method: 'POST', body: JSON.stringify({ name: $('name').value }) });
+    const d = await r.json();
+    if (d.error) return $('err').textContent = d.error;
+    id = d.id; myName = $('name').value.trim();
+    sessionStorage.setItem('id', id); sessionStorage.setItem('name', myName);
+    $('join').hidden = true;
+  } catch { $('err').textContent = 'Sin conexión, intenta de nuevo'; }
+  finally { joining = false; $('go').disabled = false; }
 };
 const send = fake => { $('btns').hidden = true; fetch('/answer', { method: 'POST', body: JSON.stringify({ id, fake }) }); };
 $('fake').onclick = () => send(true);
 $('real').onclick = () => send(false);
 
 async function tick() {
-  const s = await (await fetch('/state?id=' + id)).json();
+  const sent = id, s = await (await fetch('/state?id=' + id)).json();
+  if (joining || sent !== id) return; // respuesta vieja: no decidir con datos anteriores al registro
   preload(s.images);
   // si el servidor se reinició, mi id ya no existe: volver a registrarme
   const joined = id && (s.phase !== 'lobby' || s.players.some(p => p.name === myName));
